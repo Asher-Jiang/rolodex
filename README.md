@@ -4,43 +4,94 @@
 
 # Rolodex
 
-A personal contacts app for macOS that helps you remember the person behind the name. Keep track of where you met, who introduced you, their work, and the communities you share—with searchable notes and filters to find the right person later. Bring in your Apple Contacts and add context that stays yours, even after syncing again. Everything is stored locally on your Mac. No account needed.
+
+Contacts app which stores additional context about relationships. Easily sync with icloud contacts. Keep track of where you met, who introduced you, their work, and the communities you share, with searchable notes and filters to find the right person later. Fully open-source and runs locally on your mac.
 
 ## Let an AI agent set it up
 
 Prefer to skip the Terminal steps? Copy this prompt into an AI coding agent that can run commands on your Mac:
 
 ```text
-Set up Rolodex on my Mac from https://github.com/Asher-Jiang/rolodex.
+Install and launch Rolodex on this Mac using this repository:
+https://github.com/Asher-Jiang/rolodex.git
 
-Please carry out the setup, not just explain the steps:
-1. Check that I have macOS, Git, and Node.js 22 or newer with npm.
-   Help install any missing requirements, asking me only when a manual
-   action or system permission is needed.
-2. Clone the repository into a permanent folder in my home directory
-   (such as ~/Applications/rolodex). If I already have a copy, reuse it
-   and preserve any local changes and data.
-3. Read the repository's setup instructions, run npm ci, then run
-   npm run install:mac to build the app and install the shortcut.
-   If a Rolodex shortcut already exists, check whether it works before
-   replacing it. Preserve my contacts database.
-4. Open ~/Applications/Rolodex.app and verify that the app loads in
-   my browser. Troubleshoot any setup errors.
-5. Help me run Sync Contacts and explain any macOS permission prompt
-   I need to approve myself.
+Execute the setup and verify it. Follow these steps in order, stopping
+on errors rather than continuing with a partially completed step.
 
-When finished, tell me how to open Rolodex from Spotlight and where
-the project and my data are saved. Keep the project folder in place
-because the shortcut depends on it.
+1. Check prerequisites:
+   - Run uname -s; this setup requires Darwin (macOS).
+   - Run git --version, node --version, and npm --version. Node must
+     be version 22 or newer. Use an existing compatible installation.
+   - If a requirement is missing, use the machine's existing package
+     manager where possible. Guide me through any required installer
+     or permission prompt, then recheck the versions before continuing.
+
+2. Choose a permanent checkout:
+   - If the current folder is already this repository, use it. Otherwise,
+     use "$HOME/Applications/rolodex" and create its parent if needed.
+   - If that destination exists, inspect its Git remote and working tree.
+     Reuse it only if it is this repository; never overwrite an unrelated
+     directory. Ask for a different path if there is a collision.
+   - For a new checkout, run:
+     git clone https://github.com/Asher-Jiang/rolodex.git "$HOME/Applications/rolodex"
+   - Run all npm commands from the checkout root. Read its README and
+     package.json and inspect scripts/macos/install.mjs and launch.mjs.
+     Preserve local changes; do not reset, clean, or automatically pull
+     an existing checkout. Keep the checkout at its permanent path.
+
+3. Build and install:
+   - Run npm ci and require a successful exit before proceeding.
+   - The launcher belongs at "$HOME/Applications/Rolodex.app".
+     If absent, run npm run install:mac (which also builds the app).
+   - If it exists, inspect its embedded AppleScript with osadecompile
+     and verify the referenced checkout and Node executable. If both
+     match this setup, keep the launcher and run npm run build.
+   - If it is an outdated Rolodex launcher, move it to a uniquely named
+     backup outside Applications before running npm run install:mac.
+     Restore it if installation fails. Do not replace an unrelated app.
+   - Require a successful build and confirm backend/dist/server.js,
+     frontend/dist/index.html, and the installed app bundle exist.
+     Do not edit source code or dependency versions to bypass errors.
+
+4. Launch and verify:
+   - Check for a listener on port 4317. If occupied, inspect its process
+     and working directory. Reuse it only if it is this checkout's
+     Rolodex server. Stop an outdated server from this checkout by its
+     specific PID if needed; never kill all Node processes. If another
+     app or checkout owns the port, report the conflict and ask me how
+     to proceed rather than killing it or changing the launcher's port.
+   - Run: open "$HOME/Applications/Rolodex.app"
+   - Allow up to 30 seconds for startup. Verify that
+     http://127.0.0.1:4317/api/health returns HTTP 200 with JSON containing
+     "ok": true and "app": "rolodex", and that the root URL serves the UI.
+   - Confirm the browser displays Rolodex if browser tools are available;
+     otherwise ask me to confirm. An HTTP check alone is not a visual check.
+   - If startup fails, inspect "$HOME/Library/Logs/Rolodex/server.log"
+     and report the specific error. Do not claim success without checks.
+
+5. Connect Apple Contacts:
+   - Click Sync Contacts in the UI if you have UI access; otherwise tell
+     me exactly how to do it. Let me approve the macOS permission prompt.
+   - If denied, direct me to System Settings > Privacy & Security >
+     Automation and enable Contacts for the process macOS lists.
+   - Verify the sync result in the app. An empty address book is valid;
+     do not invent contacts or treat a zero count alone as a failure.
+
+Preserve data/ and any configured database, including SQLite sidecar
+files. Do not delete, replace, upload, or print my contact data. Do not
+commit or push anything as part of setup.
+
+Finish with the exact checkout, launcher, and database paths; which
+checks passed; and any action still needed from me. Explain that the
+launcher is in my home Applications folder and available from Spotlight,
+and that its checkout and Node executable must remain in place.
 ```
 
 You may still need to approve installation or Contacts access prompts yourself.
 
 ## Install and open
 
-You need **macOS**, **Git**, and **Node.js 22 or newer** (including npm).
-
-Open Terminal and run:
+Requires **macOS**, **Git**, and **Node.js 22+** with npm:
 
 ```bash
 git clone https://github.com/Asher-Jiang/rolodex.git
@@ -49,11 +100,7 @@ npm ci
 npm run install:mac
 ```
 
-This builds the app and installs a shortcut at `~/Applications/Rolodex.app`.
-
-Press **Command-Space**, type **Rolodex**, and press **Return**. The shortcut starts the app and opens it in your browser. You can also open it from your home folder's **Applications** folder or drag it to the Dock.
-
-Keep the downloaded project folder in place: the shortcut needs it to run.
+The shortcut appears in your home **Applications** folder (`~/Applications/Rolodex.app`) and Spotlight. Open it to launch Rolodex in your browser. Keep the project folder in place; the shortcut depends on it.
 
 ## Add your contacts
 

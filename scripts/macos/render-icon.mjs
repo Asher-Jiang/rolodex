@@ -41,9 +41,15 @@ try {
 
   if (fs.existsSync(installed)) {
     fs.copyFileSync(icns, path.join(installed, 'Contents/Resources/applet.icns'));
+
+    // A Finder "custom icon" marker overrides applet.icns and makes codesign
+    // refuse the bundle, so drop it and any extended attributes first.
+    fs.rmSync(path.join(installed, 'Icon\r'), { force: true });
+    execFileSync('/usr/bin/xattr', ['-cr', installed]);
+
     // Re-sign so the edited bundle still launches, then touch and re-register it
     // so Finder drops the icon it cached.
-    execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', installed], { stdio: 'ignore' });
+    execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', installed], { stdio: ['ignore', 'ignore', 'inherit'] });
     fs.utimesSync(installed, new Date(), new Date());
     execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister', ['-f', installed], { stdio: 'ignore' });
     console.log(`Updated the icon of ${installed}`);

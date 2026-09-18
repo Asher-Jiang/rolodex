@@ -1,0 +1,66 @@
+# Private contacts, imports, exports, and backups (all formats)
+data/
+imports/
+exports/
+backups/
+private/
+
+# Databases and sidecar files, including copies outside data/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.db3
+*.dump
+
+# Contact exports and spreadsheets, wherever they are saved
+*.csv
+*.tsv
+*.vcf
+*.vcard
+*.abbu/
+*.xls
+*.xlsx
+*.numbers
+
+# Archives and backup copies that may contain contact exports
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.7z
+*.bak
+*.backup
+
+# Local configuration and credentials; keep the safe setup template
+.env
+.env.*
+!.env.example
+.npmrc
+credentials.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies, generated output, and logs
+node_modules/
+frontend/dist/
+backend/dist/
+coverage/
+logs/
+*.log
+*.tsbuildinfo
+
+# Local editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+._*
+*.swp
+*.swo
+*~

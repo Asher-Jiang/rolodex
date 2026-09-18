@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Rolodex">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4C8DF6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App tile: an 824x824 art box centred in the 1024 canvas, at the macOS corner radius. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)"/>
+
+  <!-- Cards fanned behind the front one, resting on the spindle bar. -->
+  <rect x="300" y="232" width="424" height="140" rx="40" fill="#ffffff" opacity=".34"/>
+  <rect x="256" y="282" width="512" height="150" rx="44" fill="#ffffff" opacity=".58"/>
+  <rect x="212" y="334" width="600" height="400" rx="56" fill="#ffffff"/>
+  <rect x="240" y="754" width="544" height="38" rx="19" fill="#ffffff" opacity=".5"/>
+
+  <!-- Contact glyph on the front card: head, shoulders, two lines of detail. -->
+  <circle cx="348" cy="492" r="54" fill="#2563EB"/>
+  <path d="M288 630v-18a60 60 0 0 1 120 0v18z" fill="#2563EB"/>
+  <rect x="456" y="476" width="278" height="36" rx="18" fill="#93C5FD"/>
+  <rect x="456" y="556" width="214" height="36" rx="18" fill="#BFDBFE"/>
+</svg>

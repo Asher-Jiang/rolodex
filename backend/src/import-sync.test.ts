@@ -7,7 +7,7 @@ import { parseContactNotes } from './contact-metadata.js';
 import { openDatabase, type RolodexDatabase } from './db.js';
 import { importNotionFiles } from './notion-import.js';
 import { getOverrides } from './overrides.js';
-import { createPerson, listPeople, updatePerson } from './people.js';
+import { createPerson, listPeople, mergePeople, updatePerson } from './people.js';
 import type { AppleContact } from './types.js';
 import { normalizeContactLabel } from './utils.js';
 
@@ -133,6 +133,69 @@ describe('Apple Contacts sync', () => {
     }]);
     expect((db.prepare("SELECT company FROM people WHERE full_name = 'Nolan Smith'").get() as { company: string }).company).toBe('Local Co');
     expect((db.prepare("SELECT incoming_value FROM sync_conflicts WHERE field = 'company'").get() as { incoming_value: string }).incoming_value).toBe('Contacts Co');
+  });
+});
+
+describe('recency ordering', () => {
+  const appleContact = (identifier: string, fullName: string, extra: Partial<AppleContact> = {}): AppleContact => ({
+    identifier, fullName, givenName: fullName.split(' ')[0], familyName: fullName.split(' ')[1] ?? '',
+    organizationName: 'Acme', jobTitle: 'Founder', emails: [{ value: `${identifier}@example.com`, label: 'work' }],
+    phones: [], ...extra,
+  });
+
+  /* A sync writes last_synced_from_contacts_at and raw_source_data for every
+     contact it reads. Those writes used to bump updated_at, so one sync gave
+     the whole table a single timestamp and "recently updated" collapsed into
+     the alphabetical tiebreak. */
+  it('keeps unchanged people in place while moving the ones a sync changed', () => {
+    const { db } = testDatabase();
+    const adam = appleContact('adam', 'Adam Unchanged');
+    const zoe = appleContact('zoe', 'Zoe Changed');
+    syncAppleContacts(db, [adam, zoe]);
+    db.prepare("UPDATE people SET updated_at = '2020-01-01 00:00:00'").run();
+
+    const summary = syncAppleContacts(db, [adam, { ...zoe, phones: [{ value: '555-111-2222', label: 'mobile' }] }]);
+
+    expect(summary).toMatchObject({ created: 0, matched: 2, updated: 1 });
+    const rows = db.prepare('SELECT full_name, updated_at, last_synced_from_contacts_at FROM people').all() as Array<{
+      full_name: string; updated_at: string; last_synced_from_contacts_at: string;
+    }>;
+    const unchanged = rows.find((row) => row.full_name === 'Adam Unchanged')!;
+    const changed = rows.find((row) => row.full_name === 'Zoe Changed')!;
+    expect(unchanged.updated_at).toBe('2020-01-01 00:00:00');
+    expect(changed.updated_at).not.toBe('2020-01-01 00:00:00');
+
+    // The sync is still recorded against the person it skipped.
+    expect(unchanged.last_synced_from_contacts_at).not.toBeNull();
+
+    // Ordered by recency, the changed person wins despite sorting last by name.
+    expect((listPeople(db, {}) as Array<{ fullName: string }>).map((person) => person.fullName))
+      .toEqual(['Zoe Changed', 'Adam Unchanged']);
+  });
+
+  it('puts people a sync creates above people it left alone', () => {
+    const { db } = testDatabase();
+    const existing = appleContact('existing', 'Aaron Existing');
+    syncAppleContacts(db, [existing]);
+    db.prepare("UPDATE people SET updated_at = '2020-01-01 00:00:00'").run();
+
+    syncAppleContacts(db, [existing, appleContact('added', 'Zoe Added')]);
+
+    expect((listPeople(db, {}) as Array<{ fullName: string }>).map((person) => person.fullName))
+      .toEqual(['Zoe Added', 'Aaron Existing']);
+  });
+
+  it('stamps the survivor of a merge even when only contact methods move', () => {
+    const { db } = testDatabase();
+    const keep = Number(db.prepare("INSERT INTO people (full_name, source) VALUES ('Keep Me', 'manual')").run().lastInsertRowid);
+    const drop = Number(db.prepare("INSERT INTO people (full_name, source) VALUES ('Drop Me', 'manual')").run().lastInsertRowid);
+    db.prepare("INSERT INTO contact_methods (person_id, type, value) VALUES (?, 'email', 'moved@example.com')").run(drop);
+    db.prepare("UPDATE people SET updated_at = '2020-01-01 00:00:00'").run();
+
+    mergePeople(db, drop, keep);
+
+    expect((db.prepare('SELECT updated_at FROM people WHERE id = ?').get(keep) as { updated_at: string }).updated_at)
+      .not.toBe('2020-01-01 00:00:00');
   });
 });
 

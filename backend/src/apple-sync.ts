@@ -198,6 +198,7 @@ export function syncAppleContacts(db: RolodexDatabase, contacts: AppleContact[])
   try {
     db.transaction(() => {
       for (const contact of contacts) {
+        const updatesBeforeContact = summary.updated;
         const organization = canonicalizeOrganization(contact.organizationName);
         const noteMetadata = parseContactNotes(contact.notes ?? '', catalog);
         const incomingCompany = organization.company || noteMetadata.company;
@@ -272,6 +273,14 @@ export function syncAppleContacts(db: RolodexDatabase, contacts: AppleContact[])
         }
         if (!manualOverrides.has('affiliations')) summary.updated += addAffiliations(db, person.id, incomingAffiliations);
         appendAppleSource(db, person.id, contact);
+
+        /* Emails, phones, and affiliations live in other tables, and the
+           people_updated_at trigger only watches this table's detail columns
+           (migration 005), so a person the sync actually changed is stamped
+           here. People it merely re-read keep their place in the list. */
+        if (summary.updated > updatesBeforeContact) {
+          db.prepare('UPDATE people SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(person.id);
+        }
       }
     })();
     db.prepare(`UPDATE sync_runs SET finished_at = CURRENT_TIMESTAMP, status = 'completed', summary = ? WHERE id = ?`)

@@ -272,6 +272,9 @@ export function mergePeople(db: RolodexDatabase, sourceId: number, targetId: num
     db.prepare('UPDATE sync_conflicts SET incoming_person_id = ? WHERE incoming_person_id = ?').run(targetId, sourceId);
     db.prepare('UPDATE sync_conflicts SET possible_person_id = ? WHERE possible_person_id = ?').run(targetId, sourceId);
     db.prepare('DELETE FROM people WHERE id = ?').run(sourceId);
+    // A merge can move only contact methods or an Apple id, neither of which
+    // the people_updated_at trigger watches, so stamp the survivor directly.
+    db.prepare('UPDATE people SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(targetId);
   })();
 }
 

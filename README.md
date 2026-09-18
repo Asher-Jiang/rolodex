@@ -4,118 +4,83 @@
 
 # Rolodex
 
-A local-first personal contacts app for macOS. It merges Apple Contacts and Notion CSV exports into one SQLite database, then keeps richer notes and relationship context — how you met, who introduced you, what they work on — that neither source holds.
+A personal contacts app for macOS that helps you remember the person behind the name. Keep track of where you met, who introduced you, their work, and the communities you share—with searchable notes and filters to find the right person later. Bring in your Apple Contacts and add context that stays yours, even after syncing again. Everything is stored locally on your Mac. No account needed.
 
-Nothing leaves your Mac. There is no account, no server, and no cloud service.
+## Let an AI agent set it up
 
-- **Additive sync.** Apple Contacts is a read-only capture source. Emails and phones are added, never deleted, and your notes are never overwritten.
-- **Nothing gets guessed.** Conflicting values and fuzzy name matches go to a review queue instead of being resolved silently.
-- **Your edits win.** Once you change or clear a field in the app, later syncs leave that field alone.
-- **Lossless imports.** Every original CSV row is stored verbatim, so an import can always be traced back to its source.
+Prefer to skip the Terminal steps? Copy this prompt into an AI coding agent that can run commands on your Mac:
 
-## Requirements
+```text
+Set up Rolodex on my Mac from https://github.com/Asher-Jiang/rolodex.
 
-- macOS
-- Node.js 22 or newer (`node --version`)
+Please carry out the setup, not just explain the steps:
+1. Check that I have macOS, Git, and Node.js 22 or newer with npm.
+   Help install any missing requirements, asking me only when a manual
+   action or system permission is needed.
+2. Clone the repository into a permanent folder in my home directory
+   (such as ~/Applications/rolodex). If I already have a copy, reuse it
+   and preserve any local changes and data.
+3. Read the repository's setup instructions, run npm ci, then run
+   npm run install:mac to build the app and install the shortcut.
+   If a Rolodex shortcut already exists, check whether it works before
+   replacing it. Preserve my contacts database.
+4. Open ~/Applications/Rolodex.app and verify that the app loads in
+   my browser. Troubleshoot any setup errors.
+5. Help me run Sync Contacts and explain any macOS permission prompt
+   I need to approve myself.
 
-## Getting started
+When finished, tell me how to open Rolodex from Spotlight and where
+the project and my data are saved. Keep the project folder in place
+because the shortcut depends on it.
+```
+
+You may still need to approve installation or Contacts access prompts yourself.
+
+## Install and open
+
+You need **macOS**, **Git**, and **Node.js 22 or newer** (including npm).
+
+Open Terminal and run:
 
 ```bash
 git clone https://github.com/Asher-Jiang/rolodex.git
 cd rolodex
-npm install
-npm run dev
+npm ci
+npm run install:mac
 ```
 
-Then open [http://localhost:5173](http://localhost:5173). Stop both servers with `Control-C`.
+This builds the app and installs a shortcut at `~/Applications/Rolodex.app`.
 
-For a production-style local run:
+Press **Command-Space**, type **Rolodex**, and press **Return**. The shortcut starts the app and opens it in your browser. You can also open it from your home folder's **Applications** folder or drag it to the Dock.
+
+Keep the downloaded project folder in place: the shortcut needs it to run.
+
+## Add your contacts
+
+Click **Sync Contacts** and allow access when macOS asks. Rolodex reads your Apple Contacts without changing them. You can also add people manually and edit their details in the app.
+
+If access is denied, open **System Settings → Privacy & Security → Automation**, enable Contacts access for Rolodex (or Terminal), then reopen the app and try again.
+
+## Your data
+
+Your data is saved in `data/contacts.sqlite` inside the project folder. The `data/` folder, database files, contact exports, and local `.env` files are Git-ignored. Keep your own backups; deleting the project folder also deletes its local data.
+
+Closing the browser leaves the app running. Before copying the database for a backup, stop the app's Node process (`backend/dist/server.js`) in Activity Monitor.
+
+## Update or develop
+
+To update, stop the app's Node process in Activity Monitor, then run these commands in the project folder and reopen Rolodex:
 
 ```bash
+git pull
+npm ci
 npm run build
-npm start
 ```
 
-Then open [http://localhost:4317](http://localhost:4317).
+If you move the project folder or change your Node installation, move `~/Applications/Rolodex.app` to Trash and run `npm run install:mac` again.
 
-The database is created on first run at `data/contacts.sqlite`. Set `DATABASE_PATH` and `PORT` in a `.env` file to change that; see [.env.example](.env.example).
+For development, run `npm run dev` and open http://localhost:5173. Run `npm test` to check your changes.
 
-## Open from Spotlight
+If the shortcut fails to open, check `~/Library/Logs/Rolodex/server.log`.
 
-Run `npm run install:mac` once to build the app and install `~/Applications/Rolodex.app`. Press Command-Space, type **Rolodex**, and press Return. The launcher starts the server and opens your browser; opening it again reuses the running server. No Terminal window is needed.
-
-Keep the project folder in place — the launcher references both it and the Node executable used during installation. The server listens only on your Mac and stays running after you close the browser, until logout or until you stop it. To stop it manually, quit the Node process whose command is `backend/dist/server.js`.
-
-After code changes, stop the running server and run `npm run build`. If you move the project or replace your Node installation, move the old launcher to Trash and run `npm run install:mac` again. Startup errors appear in a dialog; server logs are in `~/Library/Logs/Rolodex/server.log`.
-
-## One manual permission step
-
-Click **Sync Contacts** and approve the macOS prompt allowing Terminal — or Rolodex, when using the launcher — to control Contacts.
-
-If access was previously denied, open **System Settings → Privacy & Security → Automation**, enable **Contacts** under the process shown there, restart the app, and click **Sync Contacts** again.
-
-The sync reads all Apple Contacts. It never changes them.
-
-## What sync does
-
-- Matches by stable Apple ID, then email, phone, and exact normalized name.
-- Adds emails and phone numbers without deleting existing methods, unless that contact category was manually edited in the app.
-- Fills company, field/role, affiliations, and meeting context only when the app's own value is empty. Apple job titles are normalized into field/role rather than stored separately.
-- Never overwrites notes, affiliations, meeting context, or introductions.
-- Sends conflicting company values and fuzzy name matches to the **Review queue**.
-- Is idempotent: the same Apple contact is not recreated on later runs.
-- Records per-field overrides. Once you change or clear company, field/role, meeting context, notes, affiliations, phones, or emails, older Apple values can no longer restore or conflict with that choice.
-
-Apple Contacts Notes are parsed conservatively for known company, field/role, and affiliation names, plus `met at/through/via/in …` phrases. The original note is always preserved in raw source history.
-
-Recognized aliases are normalized so the same organization does not appear under several spellings — `JS` becomes `Jane Street`, `South Park Commons` becomes the affiliation `SPC`, and so on. The vocabulary ships tuned to its author's network; edit [backend/src/contact-metadata.ts](backend/src/contact-metadata.ts) to match your own.
-
-More detail is in [docs/sync-behavior.md](docs/sync-behavior.md).
-
-## Notion imports
-
-Use **Data & sync → Notion CSV** in the app, or run:
-
-```bash
-npm run import:notion -- "/absolute/path/to/export.csv" "/absolute/path/to/another.csv"
-```
-
-The importer merges rows by normalized name, unions affiliations and contact methods, combines distinct notes, records incompatible scalar fields for review, and saves each complete raw row in `import_rows`.
-
-Expected columns are `Name`, `Company`, `Field`, `Contact`, `Affiliation?`, `Notes`, and `Introduced me to:`; missing columns are skipped. `Introduced me to:` means the person in that row introduced you to the people listed, and parenthetical text is kept as relationship context.
-
-## Data and backups
-
-Your database is `data/contacts.sqlite`. That whole directory is Git-ignored, along with CSV, vCard, and archive files anywhere in the tree, so personal data cannot be committed by accident.
-
-Before making large manual changes, stop the app and copy the file somewhere safe:
-
-```bash
-cp data/contacts.sqlite data/contacts-backup.sqlite
-```
-
-## Commands
-
-```bash
-npm run dev          # frontend and backend with live reload
-npm test             # importer, sync, and interface tests
-npm run build        # type-check and build both packages
-npm run db:migrate   # apply any new database migrations
-npm run install:mac  # build and install the Spotlight launcher
-npm run icon         # rebuild the app icon from assets/icon.svg
-```
-
-## Project layout
-
-```text
-frontend/   React + Vite interface
-backend/    Express API, SQLite access, import and sync logic
-scripts/    Apple Contacts reader and macOS launcher tooling
-assets/     App icon source and rendered output
-docs/       Schema and sync notes
-data/       Local SQLite database (Git-ignored)
-```
-
-## License
-
-[MIT](LICENSE)
+[MIT License](LICENSE)
